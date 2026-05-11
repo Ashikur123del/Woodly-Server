@@ -8,9 +8,9 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-    origin: '*', // প্রোডাকশনে আপনার ফ্রন্টএন্ড লিঙ্ক দিতে পারেন
-    methods: ["GET", "POST", "PATCH", "DELETE"],
-    credentials: true
+  origin: '*', // সব ডোমেইন থেকে ডাটা এক্সেস অ্যালাউ করবে
+  methods: ["GET", "POST", "PATCH", "DELETE"],
+  credentials: true
 }));
 app.use(express.json());
 

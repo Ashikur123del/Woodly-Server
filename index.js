@@ -8,13 +8,14 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: '*', // সব ডোমেইন থেকে ডাটা এক্সেস অ্যালাউ করবে
-  methods: ["GET", "POST", "PATCH", "DELETE"],
+  origin: '*', 
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   credentials: true
 }));
 app.use(express.json());
 
 const uri = process.env.MONGODB_URL;
+
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -23,82 +24,87 @@ const client = new MongoClient(uri, {
   }
 });
 
-// মঙ্গোডিবি কানেকশন হ্যান্ডলার
-let db;
-async function connectDB() {
-  if (db) return db;
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedDb) return cachedDb;
+  
   try {
     await client.connect();
-    db = client.db('wanderlut'); // আপনার ডাটাবেস নাম
-    console.log("Connected to MongoDB");
+    // আপনার স্ক্রিনশট অনুযায়ী ডেটাবেস নাম
+    const db = client.db('wanderlut'); 
+    cachedDb = db;
+    console.log("Connected to MongoDB Atlas (wanderlut)");
     return db;
-  } catch (err) {
-    console.error("MongoDB Connection Error:", err);
-    throw err;
+  } catch (error) {
+    console.error("MongoDB Connection Error:", error);
+    throw error;
   }
 }
 
 // ১. রুট রাউট
 app.get('/', (req, res) => {
-  res.send('Server Running Perfectly');
+  res.json({ message: 'Server is live and running' });
 });
 
 // ২. ডাটা সেভ করা (POST)
 app.post("/orders", async (req, res) => {
   try {
-    const database = await connectDB();
-    const ordersCollection = database.collection("orders"); // নাম পরিবর্তন করা হয়েছে
-    const orderData = req.body;
-    
-    // ডাটাবেসে সেভ করার আগে টাইপ চেক (ঐচ্ছিক কিন্তু ভালো)
-    const result = await ordersCollection.insertOne(orderData);
-    res.status(201).send({ ...orderData, _id: result.insertedId });
+    const database = await connectToDatabase();
+    // কালেকশন নাম 'orders' থেকে বদলে 'destinations' করা হলো
+    const collection = database.collection("destinations"); 
+    const result = await collection.insertOne(req.body);
+    res.status(201).json({ ...req.body, _id: result.insertedId });
   } catch (error) {
     console.error("POST Error:", error);
-    res.status(500).send({ error: "Order failed to save" });
+    res.status(500).json({ success: false, error: "Failed to save data" });
   }
 });
 
 // ৩. ডাটা পড়া (GET)
 app.get("/orders", async (req, res) => {
   try {
-    const database = await connectDB();
-    const ordersCollection = database.collection("orders");
-    const result = await ordersCollection.find().toArray();
-    res.send(result);
+    const database = await connectToDatabase();
+    // কালেকশন নাম 'destinations' থেকে ডাটা ফেচ করবে
+    const collection = database.collection("destinations"); 
+    const result = await collection.find().toArray();
+    res.json(result);
   } catch (error) {
     console.error("GET Error:", error);
-    res.status(500).send({ error: "Failed to fetch orders" });
+    res.status(500).json({ success: false, error: "Could not fetch data" });
   }
 });
 
 // ৪. ডাটা আপডেট (PATCH)
-app.patch("/orders/:id", async (req, res) => { 
+app.patch("/orders/:id", async (req, res) => {
   try {
-    const database = await connectDB();
-    const ordersCollection = database.collection("orders");
+    const database = await connectToDatabase();
+    const collection = database.collection("destinations");
     const id = req.params.id;
-    const updateData = req.body;
     
-    const { _id, ...updatedFields } = updateData; 
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
 
-    const result = await ordersCollection.updateOne(
+    const { _id, ...updatedFields } = req.body;
+
+    const result = await collection.updateOne(
       { _id: new ObjectId(id) },
       { $set: updatedFields }
     );
     res.json(result);
   } catch (error) {
     console.error("PATCH Error:", error);
-    res.status(500).send({ error: "Internal Server Error" });
+    res.status(500).json({ success: false, error: "Update failed" });
   }
 });
 
-// লোকালহোস্টের জন্য
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(port, () => {
-        console.log(`Server is running on port: ${port}`);
-    });
-}
-
-// Vercel এর জন্য এক্সপোর্ট
+// Vercel এর জন্য exports
 module.exports = app;
+
+// লোকাল রান করার জন্য
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server running locally on port ${port}`);
+  });
+}

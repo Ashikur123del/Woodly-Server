@@ -19,55 +19,71 @@ const client = new MongoClient(uri, {
   }
 });
 
-async function run() {
-  try {
-    // await client.connect(); // Production-এ এটি অপশনাল হতে পারে
-    const db = client.db('wanderlut');
-    const destinationCollection = db.collection("destinations");
-
-    // ১. ডাটাবেসে নতুন অর্ডার সেভ করা (POST)
-    app.post("/orders", async (req, res) => {
-      try {
-        const orderData = req.body;
-        const result = await destinationCollection.insertOne(orderData);
-        res.status(201).send({ ...orderData, _id: result.insertedId });
-      } catch (error) {
-        res.status(500).send({ error: "Order failed to save" });
-      }
-    });
-
-    // ২. ডাটাবেস থেকে সব অর্ডার নিয়ে আসা (GET) - এটি ছাড়া ডাটা আসবে না
-    app.get("/orders", async (req, res) => {
-      try {
-        const cursor = destinationCollection.find();
-        const result = await cursor.toArray();
-        res.send(result);
-      } catch (error) {
-        res.status(500).send({ error: "Failed to fetch orders" });
-      }
-    });
-
-    // ৩. আইডি দিয়ে আপডেট করা (PATCH)
-    app.patch("/destination/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const updateData = req.body;
-        const result = await destinationCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updateData }
-        );
-        res.json(result);
-      } catch (error) {
-        res.status(500).send({ error: "Internal Server Error" });
-      }
-    });
-
-    console.log("MongoDB Connected Successfully!");
-  } catch (error) {
-    console.error("Connection Error:", error);
-  }
+// মঙ্গোডিবি কানেকশন হ্যান্ডলার (Serverless এর জন্য সেরা উপায়)
+let db;
+async function connectDB() {
+  if (db) return db; // আগে কানেক্ট করা থাকলে সেটিই ব্যবহার করবে
+  await client.connect();
+  db = client.db('wanderlut');
+  return db;
 }
-run().catch(console.dir);
 
-app.get('/', (req, res) => { res.send('Server Running'); });
-app.listen(port, () => { console.log(`Server is running on port: ${port}`); });
+// ১. রুট রাউট
+app.get('/', (req, res) => {
+  res.send('Server Running Perfectly');
+});
+
+// ২. ডাটা সেভ করা (POST)
+app.post("/orders", async (req, res) => {
+  try {
+    const database = await connectDB();
+    const destinationCollection = database.collection("destinations");
+    const orderData = req.body;
+    const result = await destinationCollection.insertOne(orderData);
+    res.status(201).send({ ...orderData, _id: result.insertedId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "Order failed to save" });
+  }
+});
+
+// ৩. ডাটা পড়া (GET)
+app.get("/orders", async (req, res) => {
+  try {
+    const database = await connectDB();
+    const destinationCollection = database.collection("destinations");
+    const result = await destinationCollection.find().toArray();
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "Failed to fetch orders" });
+  }
+});
+
+// ৪. ডাটা আপডেট (PATCH)
+app.patch("/destination/:id", async (req, res) => {
+  try {
+    const database = await connectDB();
+    const destinationCollection = database.collection("destinations");
+    const id = req.params.id;
+    const updateData = req.body;
+    const result = await destinationCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "Internal Server Error" });
+  }
+});
+
+// সার্ভার লিসেন (লোকালহোস্টের জন্য)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running on port: ${port}`);
+    });
+}
+
+// Vercel এর জন্য এক্সপোর্ট
+module.exports = app;

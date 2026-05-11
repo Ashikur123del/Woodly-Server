@@ -42,16 +42,15 @@ async function connectToDatabase() {
   }
 }
 
-// ১. রুট রাউট
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is live and running' });
 });
 
-// ২. ডাটা সেভ করা (POST)
+
 app.post("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
-    // কালেকশন নাম 'orders' থেকে বদলে 'destinations' করা হলো
     const collection = database.collection("destinations"); 
     const result = await collection.insertOne(req.body);
     res.status(201).json({ ...req.body, _id: result.insertedId });
@@ -61,11 +60,10 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-// ৩. ডাটা পড়া (GET)
+
 app.get("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
-    // কালেকশন নাম 'destinations' থেকে ডাটা ফেচ করবে
     const collection = database.collection("destinations"); 
     const result = await collection.find().toArray();
     res.json(result);

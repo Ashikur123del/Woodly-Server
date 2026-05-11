@@ -7,7 +7,11 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*', // প্রোডাকশনে আপনার ফ্রন্টএন্ড লিঙ্ক দিতে পারেন
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true
+}));
 app.use(express.json());
 
 const uri = process.env.MONGODB_URL;
@@ -19,13 +23,19 @@ const client = new MongoClient(uri, {
   }
 });
 
-// মঙ্গোডিবি কানেকশন হ্যান্ডলার (Serverless এর জন্য সেরা উপায়)
+// মঙ্গোডিবি কানেকশন হ্যান্ডলার
 let db;
 async function connectDB() {
-  if (db) return db; // আগে কানেক্ট করা থাকলে সেটিই ব্যবহার করবে
-  await client.connect();
-  db = client.db('wanderlut');
-  return db;
+  if (db) return db;
+  try {
+    await client.connect();
+    db = client.db('wanderlut'); // আপনার ডাটাবেস নাম
+    console.log("Connected to MongoDB");
+    return db;
+  } catch (err) {
+    console.error("MongoDB Connection Error:", err);
+    throw err;
+  }
 }
 
 // ১. রুট রাউট
@@ -37,48 +47,53 @@ app.get('/', (req, res) => {
 app.post("/orders", async (req, res) => {
   try {
     const database = await connectDB();
-    const destinationCollection = database.collection("destinations");
+    const ordersCollection = database.collection("orders"); // নাম পরিবর্তন করা হয়েছে
     const orderData = req.body;
-    const result = await destinationCollection.insertOne(orderData);
+    
+    // ডাটাবেসে সেভ করার আগে টাইপ চেক (ঐচ্ছিক কিন্তু ভালো)
+    const result = await ordersCollection.insertOne(orderData);
     res.status(201).send({ ...orderData, _id: result.insertedId });
   } catch (error) {
-    console.error(error);
+    console.error("POST Error:", error);
     res.status(500).send({ error: "Order failed to save" });
   }
 });
 
-// ৩. ডাটা পড়া (GET)
+// ৩. ডাটা পড়া (GET)
 app.get("/orders", async (req, res) => {
   try {
     const database = await connectDB();
-    const destinationCollection = database.collection("destinations");
-    const result = await destinationCollection.find().toArray();
+    const ordersCollection = database.collection("orders");
+    const result = await ordersCollection.find().toArray();
     res.send(result);
   } catch (error) {
-    console.error(error);
+    console.error("GET Error:", error);
     res.status(500).send({ error: "Failed to fetch orders" });
   }
 });
 
 // ৪. ডাটা আপডেট (PATCH)
-app.patch("/destination/:id", async (req, res) => {
+app.patch("/orders/:id", async (req, res) => { 
   try {
     const database = await connectDB();
-    const destinationCollection = database.collection("destinations");
+    const ordersCollection = database.collection("orders");
     const id = req.params.id;
     const updateData = req.body;
-    const result = await destinationCollection.updateOne(
+    
+    const { _id, ...updatedFields } = updateData; 
+
+    const result = await ordersCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      { $set: updatedFields }
     );
     res.json(result);
   } catch (error) {
-    console.error(error);
+    console.error("PATCH Error:", error);
     res.status(500).send({ error: "Internal Server Error" });
   }
 });
 
-// সার্ভার লিসেন (লোকালহোস্টের জন্য)
+// লোকালহোস্টের জন্য
 if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {
         console.log(`Server is running on port: ${port}`);

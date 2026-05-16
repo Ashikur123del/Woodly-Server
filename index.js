@@ -31,6 +31,7 @@ async function connectToDatabase() {
   
   try {
     await client.connect();
+    // আপনার স্ক্রিনশট অনুযায়ী ডেটাবেস নাম
     const db = client.db('wanderlut'); 
     cachedDb = db;
     console.log("Connected to MongoDB Atlas (wanderlut)");
@@ -41,11 +42,12 @@ async function connectToDatabase() {
   }
 }
 
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is live and running' });
 });
 
-// ১. নতুন অর্ডার তৈরি (POST)
+
 app.post("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -58,7 +60,7 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-// ২. সব অর্ডার একসাথে আনা (GET All)
+
 app.get("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -68,30 +70,6 @@ app.get("/orders", async (req, res) => {
   } catch (error) {
     console.error("GET Error:", error);
     res.status(500).json({ success: false, error: "Could not fetch data" });
-  }
-});
-
-// 💡 ৩. আইডি দিয়ে নির্দিষ্ট ১টি অর্ডার আনা (GET Single - এটি মিসিং ছিল!)
-app.get("/orders/:id", async (req, res) => {
-  try {
-    const database = await connectToDatabase();
-    const collection = database.collection("destinations");
-    const id = req.params.id;
-
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
-    const order = await collection.findOne({ _id: new ObjectId(id) });
-    
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    res.json(order);
-  } catch (error) {
-    console.error("GET Single Error:", error);
-    res.status(500).json({ success: false, error: "Could not fetch order details" });
   }
 });
 
@@ -112,7 +90,6 @@ app.patch("/orders/:id", async (req, res) => {
       { _id: new ObjectId(id) },
       { $set: updatedFields }
     );
-    
     res.json(result);
   } catch (error) {
     console.error("PATCH Error:", error);

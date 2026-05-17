@@ -31,7 +31,6 @@ async function connectToDatabase() {
   
   try {
     await client.connect();
-    // আপনার স্ক্রিনশট অনুযায়ী ডেটাবেস নাম
     const db = client.db('wanderlut'); 
     cachedDb = db;
     console.log("Connected to MongoDB Atlas (wanderlut)");
@@ -73,7 +72,29 @@ app.get("/orders", async (req, res) => {
   }
 });
 
-// ৪. ডাটা আপডেট (PATCH)
+
+app.get("/orders/:id", async (req, res) => {
+  try {
+    const database = await connectToDatabase();
+    const collection = database.collection("destinations");
+    const id = req.params.id;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const result = await collection.findOne({ _id: new ObjectId(id) });
+    if (!result) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error("GET Single Order Error:", error);
+    res.status(500).json({ success: false, error: "Could not fetch order" });
+  }
+});
+
+
 app.patch("/orders/:id", async (req, res) => {
   try {
     const database = await connectToDatabase();

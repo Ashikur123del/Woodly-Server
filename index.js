@@ -32,8 +32,10 @@ async function connectToDatabase() {
   try {
     await client.connect();
     const db = client.db('wanderlut'); 
+
     cachedDb = db;
     console.log("Connected to MongoDB Atlas (wanderlut)");
+
     return db;
   } catch (error) {
     console.error("MongoDB Connection Error:", error);
@@ -71,7 +73,7 @@ app.get("/orders", async (req, res) => {
     res.status(500).json({ success: false, error: "Could not fetch data" });
   }
 });
-
+ 
 
 app.get("/orders/:id", async (req, res) => {
   try {
@@ -118,10 +120,9 @@ app.patch("/orders/:id", async (req, res) => {
   }
 });
 
-// Vercel এর জন্য exports
+
 module.exports = app;
 
-// লোকাল রান করার জন্য
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
     console.log(`Server running locally on port ${port}`);

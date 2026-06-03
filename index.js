@@ -44,6 +44,54 @@ app.get('/', (req, res) => {
   res.json({ message: 'Server is live and running' });
 });
 
+// ==========================================
+// 🎯 ফেসবুক পিক্সেল এপিআই এন্ডপয়েন্টসমূহ
+// ==========================================
+
+// ১. পিক্সেল আইডি ডাটাবেজ থেকে গেট করার রাউট
+app.get('/api/pixel-config', async (req, res) => {
+  try {
+    const database = await connectToDatabase();
+    const collection = database.collection("pixel_settings");
+    
+    const config = await collection.findOne({ identifier: "fb_pixel" });
+    const activePixelId = config ? config.pixelId : (process.env.FACEBOOK_PIXEL_ID || null);
+
+    res.status(200).json({ success: true, pixelId: activePixelId });
+  } catch (error) {
+    console.error("GET pixel-config error:", error);
+    res.status(200).json({ success: false, pixelId: process.env.FACEBOOK_PIXEL_ID || null });
+  }
+});
+
+// ২. পিক্সেল আইডি ডাটাবেজে সেভ/আপডেট করার রাউট
+app.post('/api/pixel-config', async (req, res) => {
+  try {
+    const { pixelId } = req.body;
+    if (!pixelId) {
+      return res.status(400).json({ success: false, error: "Pixel ID is required" });
+    }
+
+    const database = await connectToDatabase();
+    const collection = database.collection("pixel_settings");
+
+    await collection.updateOne(
+      { identifier: "fb_pixel" },
+      { $set: { pixelId: pixelId.trim(), updatedAt: new Date() } },
+      { upsert: true }
+    );
+
+    res.status(200).json({ success: true, message: "Pixel ID saved successfully" });
+  } catch (error) {
+    console.error("POST pixel-config error:", error);
+    res.status(500).json({ success: false, error: "Failed to save pixel ID" });
+  }
+});
+
+// ==========================================
+// 🎯 অন্যান্য বিদ্যমান রাউটসমূহ
+// ==========================================
+
 app.post("/views/increment", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -62,7 +110,6 @@ app.post("/views/increment", async (req, res) => {
     res.status(500).json({ success: false, error: "Failed to increment view" });
   }
 });
-
 
 app.get("/views", async (req, res) => {
   try {
@@ -98,7 +145,6 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-
 app.get("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -110,7 +156,6 @@ app.get("/orders", async (req, res) => {
     res.status(500).json({ success: false, error: "Could not fetch data" });
   }
 });
-
 
 app.get("/orders/:id", async (req, res) => {
   try {
@@ -163,9 +208,3 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Server running locally on port ${port}`);
   });
 }
-
-
-
-
-
-

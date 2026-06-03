@@ -6,7 +6,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
-// CORS কনফিগারেশন
 app.use(cors({
   origin: '*', 
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
@@ -41,12 +40,10 @@ async function connectToDatabase() {
   }
 }
 
-// বেস রুট টেস্ট
 app.get('/', (req, res) => {
   res.json({ message: 'Server is live and running' });
 });
 
-// 🎯 ১. লাইভ ভিউ কাউন্ট ইনক্রিমেন্ট পোস্ট রাউট
 app.post("/views/increment", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -66,7 +63,7 @@ app.post("/views/increment", async (req, res) => {
   }
 });
 
-// 🎯 ২. মোট ভিউ গেট করার রাউট
+
 app.get("/views", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -80,7 +77,6 @@ app.get("/views", async (req, res) => {
   }
 });
 
-// 🎯 ৩. অর্ডার পোস্ট রাউট (বাংলাদেশ লোকাল ডেটসহ)
 app.post("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -102,7 +98,7 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-// 🎯 ৪. সব অর্ডার গেট করার রাউট
+
 app.get("/orders", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -115,7 +111,7 @@ app.get("/orders", async (req, res) => {
   }
 });
 
-// 🎯 ৫. সিঙ্গেল অর্ডার গেট রাউট
+
 app.get("/orders/:id", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -137,7 +133,6 @@ app.get("/orders/:id", async (req, res) => {
   }
 });
 
-// 🎯 ৬. অর্ডার আপডেট রাউট
 app.patch("/orders/:id", async (req, res) => {
   try {
     const database = await connectToDatabase();
@@ -168,3 +163,9 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Server running locally on port ${port}`);
   });
 }
+
+
+
+
+
+
